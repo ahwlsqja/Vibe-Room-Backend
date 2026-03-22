@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  githubId    String       @unique
+  username    String
+  email       String?
+  avatarUrl   String?
+  deployCount Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  deployments Deployment[]
+  analyses    Analysis[]
+  vibeScores  VibeScore[]
+}
+
+model Deployment {
+  id             String   @id @default(cuid())
+  userId         String
+  contractName   String
+  contractSource String   @db.Text
+  address        String?
+  txHash         String?
+  network        String   @default("monadTestnet")
+  status         String   @default("pending")
+  errorMessage   String?  @db.Text
+  gasUsed        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Analysis {
+  id              String   @id @default(cuid())
+  userId          String
+  contractSource  String   @db.Text
+  errorMessage    String   @db.Text
+  fixedCode       String?  @db.Text
+  explanation     String?  @db.Text
+  category        String?
+  isMonadSpecific Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model VibeScore {
+  id              String   @id @default(cuid())
+  userId          String?
+  contractSource  String   @db.Text
+  score           Int
+  suggestions     Json     @default("[]")
+  engineBased     Boolean  @default(false)
+  conflicts       String?
+  reExecutions    String?
+  gasEfficiency   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}

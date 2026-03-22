@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.git/
+target/
+*.md
+.env
+.env.*
+test/
+coverage/
+.eslintrc.js
+.prettierrc
+.gsd/
