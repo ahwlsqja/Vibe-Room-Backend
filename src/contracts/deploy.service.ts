@@ -47,7 +47,7 @@ export class DeployService {
       );
     }
 
-    const resolvedUserId = userId ?? 'anonymous';
+    const resolvedUserId = userId ?? null;
 
     // Compile the source code
     const compiled: CompileResultDto = this.compileService.compile(source);
