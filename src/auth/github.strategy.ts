@@ -15,7 +15,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     super({
       clientID: configService.get<string>('github.clientId') || 'placeholder-client-id',
       clientSecret: configService.get<string>('github.clientSecret') || 'placeholder-client-secret',
-      callbackURL: '/api/auth/github/callback',
+      callbackURL: configService.get<string>('CALLBACK_URL') || 'https://vibe-room-backend-production.up.railway.app/api/auth/github/callback',
       scope: ['user:email'],
     });
   }
