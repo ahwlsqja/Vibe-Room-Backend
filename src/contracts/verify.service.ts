@@ -135,36 +135,43 @@ export class VerifyService {
 
       const data = await response.json();
 
+      // Sourcify API v2 response structure:
+      // { isJobCompleted, verificationId, contract: { match, creationMatch, runtimeMatch, chainId, address }, error? }
+      const contractMatch = data.contract?.match ?? data.contract?.runtimeMatch ?? data.contract?.creationMatch;
+
       // Determine status from response
       const isVerified =
         data.status === 'verified' ||
-        data.match === 'exact_match' ||
-        data.match === 'match';
+        contractMatch === 'exact_match' ||
+        contractMatch === 'match' ||
+        contractMatch === 'partial_match';
 
       const isFailed =
-        data.status === 'failed' || data.error !== undefined;
+        data.status === 'failed' ||
+        data.error !== undefined ||
+        (data.isJobCompleted === true && !isVerified);
 
       if (isVerified) {
-        const address: string = data.address ?? '';
+        const address: string = data.contract?.address ?? '';
         const explorerUrl = address
           ? `https://testnet.monadexplorer.com/address/${address}`
           : undefined;
 
         this.logger.log(
-          `Verify poll: verificationId=${verificationId}, status=verified, match=${data.match ?? 'unknown'}`,
+          `Verify poll: verificationId=${verificationId}, status=verified, match=${contractMatch ?? 'unknown'}`,
         );
 
         return {
           verificationId,
           status: 'verified',
-          match: data.match ?? 'exact_match',
+          match: contractMatch ?? 'exact_match',
           explorerUrl,
         };
       }
 
       if (isFailed) {
         const errorMsg: string =
-          data.error ?? data.message ?? 'Verification failed';
+          data.error?.message ?? data.error ?? data.message ?? 'Verification failed';
 
         this.logger.warn(
           `Verify poll: verificationId=${verificationId}, status=failed, error=${errorMsg}`,
@@ -177,7 +184,7 @@ export class VerifyService {
         };
       }
 
-      // Still pending
+      // Still pending (isJobCompleted === false or absent)
       this.logger.log(
         `Verify poll: verificationId=${verificationId}, status=pending`,
       );

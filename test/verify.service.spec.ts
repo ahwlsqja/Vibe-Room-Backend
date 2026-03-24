@@ -148,9 +148,12 @@ describe('VerifyService', () => {
         ok: true,
         status: 200,
         json: async () => ({
-          status: 'verified',
-          match: 'exact_match',
-          address: '0x1234567890abcdef1234567890abcdef12345678',
+          isJobCompleted: true,
+          verificationId: 'uuid-123',
+          contract: {
+            match: 'exact_match',
+            address: '0x1234567890abcdef1234567890abcdef12345678',
+          },
         }),
       });
 
@@ -226,13 +229,17 @@ describe('VerifyService', () => {
       expect(result.status).toBe('pending');
     });
 
-    it('should detect verification via match field (no explicit status)', async () => {
+    it('should detect verification via contract.match field', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({
-          match: 'match',
-          address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+          isJobCompleted: true,
+          verificationId: 'uuid-match',
+          contract: {
+            match: 'match',
+            address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+          },
         }),
       });
 
