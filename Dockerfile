@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /build
 
 # Clone the monad-core repo to build the CLI binary
-RUN git clone --depth 1 https://github.com/Vibe-Loom/vibe-loom-core.git .
+RUN git clone --depth 1 https://github.com/ahwlsqja/Vibe-Room-Core.git .
 
 # Build only the CLI binary in release mode
 RUN cargo build --release -p monad-cli
