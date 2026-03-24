@@ -74,7 +74,13 @@ export class DeployService {
       const wallet = new Wallet(privateKey, provider);
 
       const factory = new ContractFactory(compiled.abi, compiled.bytecode, wallet);
-      const contract = await factory.deploy();
+
+      // Build default constructor arguments from ABI
+      const constructorArgs = this.buildDefaultConstructorArgs(compiled.abi);
+      this.logger.log(
+        `Deploying ${compiled.contractName} with ${constructorArgs.length} constructor arg(s)`,
+      );
+      const contract = await factory.deploy(...constructorArgs);
 
       await contract.waitForDeployment();
       const address = await contract.getAddress();
@@ -128,5 +134,57 @@ export class DeployService {
 
       throw error;
     }
+  }
+
+  /**
+   * Build default constructor arguments from ABI.
+   * Generates sensible defaults for each Solidity type so that
+   * template contracts with constructor params can be deployed
+   * without user-supplied values.
+   */
+  private buildDefaultConstructorArgs(abi: any[]): any[] {
+    const ctor = abi.find((item: any) => item.type === 'constructor');
+    if (!ctor || !ctor.inputs || ctor.inputs.length === 0) {
+      return [];
+    }
+
+    return ctor.inputs.map((input: any) => this.defaultForType(input.type, input.name));
+  }
+
+  private defaultForType(type: string, name?: string): any {
+    // Check for common naming conventions to provide better defaults
+    const lowerName = (name || '').toLowerCase();
+
+    if (type === 'string') {
+      if (lowerName.includes('name')) return 'MyToken';
+      if (lowerName.includes('symbol')) return 'MTK';
+      return 'default';
+    }
+
+    if (type === 'bool') return false;
+
+    if (type === 'address') return '0x0000000000000000000000000000000000000001';
+
+    if (type === 'bytes32') return '0x' + '00'.repeat(32);
+
+    if (type.startsWith('bytes')) return '0x00';
+
+    // uint / int types
+    if (type.startsWith('uint') || type.startsWith('int')) {
+      // Smart defaults for common parameter names
+      if (lowerName.includes('fee') || lowerName.includes('bps')) return 250; // 2.5%
+      if (lowerName.includes('supply') || lowerName.includes('total')) return BigInt('1000000000000000000000000'); // 1M * 1e18
+      if (lowerName.includes('decimal')) return 18;
+      if (lowerName.includes('limit') || lowerName.includes('max')) return 1000;
+      if (lowerName.includes('duration') || lowerName.includes('period')) return 86400; // 1 day
+      if (lowerName.includes('rate') || lowerName.includes('reward')) return 100;
+      return 0;
+    }
+
+    // Arrays
+    if (type.endsWith('[]')) return [];
+
+    // Tuples and unknown
+    return 0;
   }
 }

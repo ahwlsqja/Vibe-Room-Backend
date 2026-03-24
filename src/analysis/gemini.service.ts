@@ -5,7 +5,7 @@ import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 /** Default model (latest Flash) */
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 /** Fallback model (stable general-purpose) */
-const FALLBACK_MODEL = 'gemini-pro';
+const FALLBACK_MODEL = 'gemini-2.0-flash';
 
 @Injectable()
 export class GeminiService {
