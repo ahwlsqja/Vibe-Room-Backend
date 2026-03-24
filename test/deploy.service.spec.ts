@@ -7,6 +7,7 @@ import {
 import { DeployService } from '../src/contracts/deploy.service';
 import { CompileService } from '../src/contracts/compile.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { PaymasterService } from '../src/paymaster/paymaster.service';
 
 // Mock ethers module before imports resolve
 const mockGetAddress = jest.fn();
@@ -83,6 +84,12 @@ describe('DeployService', () => {
           provide: CompileService,
           useValue: {
             compile: jest.fn().mockReturnValue(mockCompileResult),
+          },
+        },
+        {
+          provide: PaymasterService,
+          useValue: {
+            incrementDeployCount: jest.fn().mockResolvedValue(1),
           },
         },
       ],

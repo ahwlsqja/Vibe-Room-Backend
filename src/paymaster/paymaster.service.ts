@@ -9,7 +9,7 @@ import { JsonRpcProvider } from 'ethers';
 import { PrismaService } from '../prisma/prisma.service';
 import { DeployStatusDto } from './dto/deploy-status.dto';
 
-export const MAX_FREE_DEPLOYMENTS = 3;
+export const MAX_FREE_DEPLOYMENTS = 10;
 
 @Injectable()
 export class PaymasterService {

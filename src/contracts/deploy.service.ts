@@ -8,6 +8,7 @@ import { JsonRpcProvider, Wallet, ContractFactory } from 'ethers';
 import { PrismaService } from '../prisma/prisma.service';
 import { CompileService } from './compile.service';
 import { CompileResultDto } from './dto/compile-result.dto';
+import { PaymasterService } from '../paymaster/paymaster.service';
 
 export interface DeployResult {
   contractName: string;
@@ -24,6 +25,7 @@ export class DeployService {
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     private readonly compileService: CompileService,
+    private readonly paymasterService: PaymasterService,
   ) {}
 
   /**
@@ -91,6 +93,15 @@ export class DeployService {
       this.logger.log(
         `Deploy success: contract=${compiled.contractName}, address=${address}, txHash=${txHash}`,
       );
+
+      // Increment free deploy count if authenticated user
+      if (resolvedUserId) {
+        try {
+          await this.paymasterService.incrementDeployCount(resolvedUserId);
+        } catch (err) {
+          this.logger.warn(`Failed to increment deploy count for userId=${resolvedUserId}: ${err}`);
+        }
+      }
 
       return {
         contractName: compiled.contractName,

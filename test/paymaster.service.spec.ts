@@ -51,8 +51,8 @@ describe('PaymasterService', () => {
 
       expect(result).toEqual({
         used: 1,
-        max: 3,
-        remaining: 2,
+        max: 10,
+        remaining: 9,
         canUseRelay: true,
       });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
@@ -63,14 +63,14 @@ describe('PaymasterService', () => {
     it('should return remaining=0 and canUseRelay=false when at max deploys', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'user-2',
-        deployCount: 3,
+        deployCount: 10,
       });
 
       const result = await service.getDeployStatus('user-2');
 
       expect(result).toEqual({
-        used: 3,
-        max: 3,
+        used: 10,
+        max: 10,
         remaining: 0,
         canUseRelay: false,
       });
@@ -86,7 +86,7 @@ describe('PaymasterService', () => {
   });
 
   describe('canUseRelay', () => {
-    it('should return true when deployCount < 3', async () => {
+    it('should return true when deployCount < 10', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'user-1',
         deployCount: 2,
@@ -96,10 +96,10 @@ describe('PaymasterService', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false when deployCount >= 3', async () => {
+    it('should return false when deployCount >= 10', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        deployCount: 3,
+        deployCount: 10,
       });
 
       const result = await service.canUseRelay('user-1');
@@ -142,8 +142,8 @@ describe('PaymasterService', () => {
   });
 
   describe('constants', () => {
-    it('should have MAX_FREE_DEPLOYMENTS set to 3', () => {
-      expect(MAX_FREE_DEPLOYMENTS).toBe(3);
+    it('should have MAX_FREE_DEPLOYMENTS set to 10', () => {
+      expect(MAX_FREE_DEPLOYMENTS).toBe(10);
     });
   });
 });
