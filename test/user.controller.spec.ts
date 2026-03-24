@@ -60,15 +60,12 @@ describe('UserController', () => {
   });
 
   describe('GET /user/deployments', () => {
-    it('should return paginated deployments wrapped in success envelope', async () => {
+    it('should return paginated deployments (interceptor handles envelope)', async () => {
       const req = { user: { id: 'user-123' } };
 
       const result = await controller.getDeployments(req, 1, 20);
 
-      expect(result).toEqual({
-        success: true,
-        data: mockDeploymentsResponse,
-      });
+      expect(result).toEqual(mockDeploymentsResponse);
       expect(mockUserService.getDeployments).toHaveBeenCalledWith(
         'user-123',
         1,
@@ -102,15 +99,12 @@ describe('UserController', () => {
   });
 
   describe('GET /user/stats', () => {
-    it('should return stats wrapped in success envelope', async () => {
+    it('should return stats (interceptor handles envelope)', async () => {
       const req = { user: { id: 'user-123' } };
 
       const result = await controller.getStats(req);
 
-      expect(result).toEqual({
-        success: true,
-        data: mockStatsResponse,
-      });
+      expect(result).toEqual(mockStatsResponse);
       expect(mockUserService.getStats).toHaveBeenCalledWith('user-123');
     });
 

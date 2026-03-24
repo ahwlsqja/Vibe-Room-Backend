@@ -35,7 +35,7 @@ export class UserController {
       `getDeployments: userId=${userId}, page=${page}, limit=${limit}`,
     );
     const result = await this.userService.getDeployments(userId, page, limit);
-    return { success: true, data: result };
+    return result;
   }
 
   /**
@@ -50,6 +50,6 @@ export class UserController {
     const userId = req.user.id;
     this.logger.log(`getStats: userId=${userId}`);
     const result = await this.userService.getStats(userId);
-    return { success: true, data: result };
+    return result;
   }
 }
