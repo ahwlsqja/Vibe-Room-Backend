@@ -27,4 +27,5 @@ export interface CompileResultDto {
   abi: any[];
   bytecode: string;
   storageLayout?: StorageLayout;
+  gasOptimizationHints?: string[];
 }

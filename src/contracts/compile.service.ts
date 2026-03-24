@@ -87,6 +87,67 @@ export class CompileService {
       `Compilation successful: ${contractName} (ABI: ${abi.length} entries, bytecode: ${bytecode.length} chars)`,
     );
 
-    return { contractName, abi, bytecode, storageLayout: contract.storageLayout };
+    const gasOptimizationHints = this.generateGasHints(
+      input.settings,
+      bytecode,
+    );
+
+    return {
+      contractName,
+      abi,
+      bytecode,
+      storageLayout: contract.storageLayout,
+      gasOptimizationHints,
+    };
+  }
+
+  /**
+   * Generate advisory gas-optimization hints based on current compile settings
+   * and bytecode size. These hints do NOT modify compilation — they are purely
+   * informational suggestions for the developer.
+   */
+  private generateGasHints(
+    settings: Record<string, any>,
+    bytecodeHex: string,
+  ): string[] {
+    const hints: string[] = [];
+
+    // 1. Check optimizer
+    if (!settings.optimizer?.enabled) {
+      hints.push(
+        'Enable Solidity optimizer (`optimizer: { enabled: true, runs: 200 }`) to reduce deployed bytecode size and gas costs.',
+      );
+    }
+
+    // 2. Check via_ir
+    if (!settings.viaIR) {
+      hints.push(
+        'Enable `via_ir: true` for the Yul IR pipeline — generates more efficient bytecode, especially for complex contracts on Monad.',
+      );
+    }
+
+    // 3. EVM version positive note
+    if (settings.evmVersion === 'cancun') {
+      hints.push(
+        'EVM target is `cancun` — TSTORE/TLOAD transient storage opcodes are available for gas-efficient patterns on Monad.',
+      );
+    }
+
+    // 4. Optimizer runs tuning (always relevant)
+    hints.push(
+      'Tune optimizer `runs` parameter: lower values (200) optimize for deployment cost, higher values (10000) optimize for runtime gas of frequently-called functions.',
+    );
+
+    // 5. Bytecode size check (24KB = 24576 bytes = 49152 hex chars without 0x prefix)
+    const cleanHex = bytecodeHex.startsWith('0x')
+      ? bytecodeHex.slice(2)
+      : bytecodeHex;
+    if (cleanHex.length > 49152) {
+      hints.push(
+        '⚠️ Bytecode exceeds 24KB Spurious Dragon limit. Enable optimizer or split into smaller contracts.',
+      );
+    }
+
+    return hints;
   }
 }

@@ -7,6 +7,12 @@ export default () => ({
   monad: {
     rpcUrl: process.env.MONAD_RPC_URL ?? 'https://testnet-rpc.monad.xyz',
     privateKey: process.env.MONAD_PRIVATE_KEY,
+    chainId: parseInt(process.env.MONAD_CHAIN_ID ?? '10143', 10),
+  },
+  sourcify: {
+    baseUrl:
+      process.env.SOURCIFY_API_URL ??
+      'https://sourcify-api-monad.blockvision.org',
   },
   github: {
     clientId: process.env.GITHUB_CLIENT_ID,

@@ -178,6 +178,20 @@ contract Simple {
 
       expect(res.status).toBe(400);
     });
+
+    it('should include gasOptimizationHints in compile response', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/contracts/compile')
+        .send({ source: SIMPLE_CONTRACT });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.gasOptimizationHints).toBeDefined();
+      expect(res.body.data.gasOptimizationHints).toBeInstanceOf(Array);
+      expect(res.body.data.gasOptimizationHints.length).toBeGreaterThan(0);
+      // Default settings produce exactly 4 hints (no bytecode size warning)
+      expect(res.body.data.gasOptimizationHints.length).toBe(4);
+    }, 30000);
   });
 
   // ── Vibe-score endpoint ──
@@ -249,6 +263,133 @@ contract Simple {
         '/api/paymaster/status',
       );
       expect(res.status).toBe(401);
+    });
+  });
+
+  // ── Contract verification endpoints ──
+
+  describe('POST /api/contracts/verify', () => {
+    it('should return 400 when required fields are missing', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/contracts/verify')
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('should return 400 when address format is invalid', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/contracts/verify')
+        .send({
+          source: 'pragma solidity ^0.8.20; contract Foo {}',
+          contractName: 'Foo',
+          address: 'not-an-address',
+          txHash: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 when txHash format is invalid', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/contracts/verify')
+        .send({
+          source: 'pragma solidity ^0.8.20; contract Foo {}',
+          contractName: 'Foo',
+          address: '0x1234567890abcdef1234567890abcdef12345678',
+          txHash: 'not-a-hash',
+        });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('GET /api/contracts/verify/status/:jobId', () => {
+    it('should return a response for verify status endpoint', async () => {
+      // This will attempt to call Sourcify (unreachable in test env)
+      // so we expect a 502 BadGateway or the response wrapper
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/verify/status/nonexistent-job-id',
+      );
+
+      // Since Sourcify is unreachable in test, we expect 502
+      expect([200, 502]).toContain(res.status);
+    });
+  });
+
+  // ── Template Gallery API (M007/S04) ──
+
+  describe('GET /api/contracts/templates', () => {
+    it('should return 200 with templates array', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/templates',
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.templates).toBeInstanceOf(Array);
+      expect(res.body.data.templates.length).toBeGreaterThanOrEqual(10);
+    });
+
+    it('each template has required fields', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/templates',
+      );
+      const template = res.body.data.templates[0];
+      expect(typeof template.id).toBe('string');
+      expect(template.id.length).toBeGreaterThan(0);
+      expect(typeof template.name).toBe('string');
+      expect(template.name.length).toBeGreaterThan(0);
+      expect(typeof template.description).toBe('string');
+      expect(template.description.length).toBeGreaterThan(0);
+      expect(typeof template.category).toBe('string');
+      expect(template.category.length).toBeGreaterThan(0);
+      expect(typeof template.difficulty).toBe('string');
+      expect(template.difficulty.length).toBeGreaterThan(0);
+      expect(typeof template.fileName).toBe('string');
+      expect(template.fileName.length).toBeGreaterThan(0);
+    });
+
+    it('includes all 4 categories', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/templates',
+      );
+      const categories = new Set(
+        res.body.data.templates.map((t: { category: string }) => t.category),
+      );
+      expect(categories).toContain('DeFi');
+      expect(categories).toContain('NFT');
+      expect(categories).toContain('Utility');
+      expect(categories).toContain('Monad-Optimized');
+    });
+
+    it('templates have vibeScore field', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/templates',
+      );
+      const withScore = res.body.data.templates.filter(
+        (t: { vibeScore?: number }) => typeof t.vibeScore === 'number',
+      );
+      expect(withScore.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('GET /api/contracts/source — template ID resolution', () => {
+    it('resolves template ID from manifest', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/source?type=monad-erc20',
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.source).toContain('pragma solidity');
+    });
+
+    it('returns 400 for invalid template ID', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/source?type=nonexistent-template-xyz',
+      );
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
     });
   });
 });

@@ -1,0 +1,104 @@
+{
+  "templates": [
+    {
+      "id": "monad-erc20",
+      "name": "Monad ERC20 Token",
+      "description": "ERC20 token optimized for parallel execution with independent balance slots",
+      "category": "DeFi",
+      "tags": ["erc20", "token", "parallel-safe"],
+      "difficulty": "beginner",
+      "fileName": "MonadERC20.sol",
+      "vibeScore": 92
+    },
+    {
+      "id": "simple-amm",
+      "name": "Simple AMM",
+      "description": "Automated market maker with per-pair independent liquidity pools",
+      "category": "DeFi",
+      "tags": ["amm", "defi", "liquidity"],
+      "difficulty": "intermediate",
+      "fileName": "SimpleAMM.sol",
+      "vibeScore": 78
+    },
+    {
+      "id": "staking-pool",
+      "name": "Staking Pool",
+      "description": "Per-user staking with reward-per-token accumulator pattern for parallel claims",
+      "category": "DeFi",
+      "tags": ["staking", "rewards", "defi"],
+      "difficulty": "intermediate",
+      "fileName": "StakingPool.sol",
+      "vibeScore": 75
+    },
+    {
+      "id": "monad-erc721",
+      "name": "Monad ERC721 NFT",
+      "description": "Basic NFT with per-token ownership mapping enabling parallel mint and transfer",
+      "category": "NFT",
+      "tags": ["erc721", "nft", "parallel-safe"],
+      "difficulty": "beginner",
+      "fileName": "MonadERC721.sol",
+      "vibeScore": 88
+    },
+    {
+      "id": "nft-marketplace",
+      "name": "NFT Marketplace",
+      "description": "Simple NFT marketplace with per-listing independent storage for parallel operations",
+      "category": "NFT",
+      "tags": ["nft", "marketplace", "trading"],
+      "difficulty": "intermediate",
+      "fileName": "MonadNFTMarketplace.sol",
+      "vibeScore": 82
+    },
+    {
+      "id": "monad-multisig",
+      "name": "Multi-Signature Wallet",
+      "description": "M-of-N multisig with per-proposal independent confirmations",
+      "category": "Utility",
+      "tags": ["multisig", "governance", "security"],
+      "difficulty": "intermediate",
+      "fileName": "MonadMultisig.sol",
+      "vibeScore": 65
+    },
+    {
+      "id": "time-locked-wallet",
+      "name": "Time-Locked Wallet",
+      "description": "Per-beneficiary time-locked deposits for vesting and escrow use cases",
+      "category": "Utility",
+      "tags": ["timelock", "vesting", "escrow"],
+      "difficulty": "beginner",
+      "fileName": "TimeLockedWallet.sol",
+      "vibeScore": 85
+    },
+    {
+      "id": "access-controlled",
+      "name": "Role-Based Access Control",
+      "description": "Flexible role-based access control with per-role-per-address independent storage",
+      "category": "Utility",
+      "tags": ["access-control", "roles", "permissions"],
+      "difficulty": "beginner",
+      "fileName": "AccessControlled.sol",
+      "vibeScore": 90
+    },
+    {
+      "id": "parallel-safe-vault",
+      "name": "Parallel-Safe Vault",
+      "description": "Per-user vault pattern enabling full parallel execution of deposits and withdrawals",
+      "category": "Monad-Optimized",
+      "tags": ["vault", "parallel", "monad-native"],
+      "difficulty": "advanced",
+      "fileName": "ParallelSafeVault.sol",
+      "vibeScore": 95
+    },
+    {
+      "id": "batch-processor",
+      "name": "Batch Processor",
+      "description": "Per-user job queues for parallel batch operation processing on Monad",
+      "category": "Monad-Optimized",
+      "tags": ["batch", "parallel", "monad-native", "jobs"],
+      "difficulty": "advanced",
+      "fileName": "BatchProcessor.sol",
+      "vibeScore": 96
+    }
+  ]
+}

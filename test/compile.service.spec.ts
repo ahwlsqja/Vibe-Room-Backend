@@ -127,4 +127,78 @@ describe('CompileService', () => {
       expect(result.storageLayout!.storage).toBeInstanceOf(Array);
     });
   });
+
+  describe('gasOptimizationHints', () => {
+    it('should include gasOptimizationHints in compile result', () => {
+      const source = readContract('FixedContract.sol');
+      const result = service.compile(source);
+
+      expect(result.gasOptimizationHints).toBeDefined();
+      expect(result.gasOptimizationHints).toBeInstanceOf(Array);
+      expect(result.gasOptimizationHints!.length).toBeGreaterThan(0);
+    });
+
+    it('should include optimizer hint (optimizer not enabled)', () => {
+      const source = readContract('FixedContract.sol');
+      const result = service.compile(source);
+
+      const optimizerHint = result.gasOptimizationHints!.find((h) =>
+        h.includes('optimizer'),
+      );
+      expect(optimizerHint).toBeDefined();
+      expect(optimizerHint).toContain('Enable Solidity optimizer');
+    });
+
+    it('should include via_ir hint', () => {
+      const source = readContract('FixedContract.sol');
+      const result = service.compile(source);
+
+      const viaIrHint = result.gasOptimizationHints!.find((h) =>
+        h.includes('via_ir'),
+      );
+      expect(viaIrHint).toBeDefined();
+      expect(viaIrHint).toContain('Yul IR pipeline');
+    });
+
+    it('should include positive cancun EVM hint', () => {
+      const source = readContract('FixedContract.sol');
+      const result = service.compile(source);
+
+      const cancunHint = result.gasOptimizationHints!.find((h) =>
+        h.includes('cancun'),
+      );
+      expect(cancunHint).toBeDefined();
+      expect(cancunHint).toContain('TSTORE/TLOAD');
+    });
+
+    it('should include runs tuning hint', () => {
+      const source = readContract('FixedContract.sol');
+      const result = service.compile(source);
+
+      const runsHint = result.gasOptimizationHints!.find((h) =>
+        h.includes('Tune optimizer'),
+      );
+      expect(runsHint).toBeDefined();
+      expect(runsHint).toContain('lower values (200)');
+    });
+
+    it('should return exactly 4 hints for default settings (small contract)', () => {
+      const source = readContract('FixedContract.sol');
+      const result = service.compile(source);
+
+      // Default settings: no optimizer, no via_ir, cancun EVM, runs tuning = 4 hints
+      // Bytecode should be well under 24KB, so no size warning
+      expect(result.gasOptimizationHints!.length).toBe(4);
+    });
+
+    it('should NOT include bytecode size warning for small contracts', () => {
+      const source = readContract('FixedContract.sol');
+      const result = service.compile(source);
+
+      const sizeHint = result.gasOptimizationHints!.find((h) =>
+        h.includes('24KB'),
+      );
+      expect(sizeHint).toBeUndefined();
+    });
+  });
 });
