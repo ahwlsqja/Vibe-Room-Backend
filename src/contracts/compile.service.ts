@@ -13,6 +13,7 @@ interface SolcOutput {
   contracts?: Record<string, Record<string, {
     abi: any[];
     evm: { bytecode: { object: string } };
+    storageLayout?: { storage: any[]; types: Record<string, any> };
   }>>;
 }
 
@@ -37,7 +38,7 @@ export class CompileService {
         evmVersion: 'cancun',
         outputSelection: {
           '*': {
-            '*': ['abi', 'evm.bytecode.object'],
+            '*': ['abi', 'evm.bytecode.object', 'storageLayout'],
           },
         },
       },
@@ -86,6 +87,6 @@ export class CompileService {
       `Compilation successful: ${contractName} (ABI: ${abi.length} entries, bytecode: ${bytecode.length} chars)`,
     );
 
-    return { contractName, abi, bytecode };
+    return { contractName, abi, bytecode, storageLayout: contract.storageLayout };
   }
 }

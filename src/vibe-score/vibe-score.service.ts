@@ -4,7 +4,8 @@ import { CompileService } from '../contracts/compile.service';
 import { EngineService, CliOutput } from '../engine/engine.service';
 import { OptimizerService } from '../analysis/optimizer.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { VibeScoreResultDto } from './dto/vibe-score-result.dto';
+import { VibeScoreResultDto, ConflictAnalysis } from './dto/vibe-score-result.dto';
+import { buildConflictAnalysis } from './storage-layout-decoder';
 
 /**
  * 8 sender addresses used for constructing test transaction blocks.
@@ -78,7 +79,7 @@ export class VibeScoreService {
     this.logger.log(
       `Phase 3: Constructing transaction block (${stateChangingFns.length} state-changing functions)`,
     );
-    const { transactions, blockEnv } = this.constructTransactionBlock(
+    const { transactions, blockEnv, txFunctionMap } = this.constructTransactionBlock(
       compiled.abi,
       compiled.bytecode,
       stateChangingFns,
@@ -104,6 +105,31 @@ export class VibeScoreService {
     // ── Phase 5: Score calculation ──
     this.logger.log('Phase 5: Calculating vibe-score from engine results');
     const result = this.calculateScore(engineResult);
+
+    // ── Phase 5b: Conflict analysis (if engine returned conflict_details) ──
+    let conflictAnalysis: ConflictAnalysis | undefined;
+    if (engineResult.conflict_details && compiled.storageLayout) {
+      this.logger.log('Phase 5b: Decoding conflict analysis');
+      const analysisStart = Date.now();
+      conflictAnalysis = buildConflictAnalysis(
+        engineResult.conflict_details,
+        compiled.storageLayout,
+        compiled.abi,
+        txFunctionMap,
+        blockEnv.coinbase,
+      );
+      // Omit if no decoded conflicts
+      if (conflictAnalysis.conflicts.length === 0) {
+        conflictAnalysis = undefined;
+      }
+      this.logger.log(
+        `Phase 5b complete in ${Date.now() - analysisStart}ms: ${conflictAnalysis?.conflicts.length ?? 0} decoded conflicts`,
+      );
+    }
+
+    if (conflictAnalysis) {
+      result.conflictAnalysis = conflictAnalysis;
+    }
 
     // ── Phase 6: Persist to database ──
     await this.persistResult(source, result, userId);
@@ -155,7 +181,7 @@ export class VibeScoreService {
     abi: any[],
     bytecode: string,
     stateChangingFns: any[],
-  ): { transactions: any[]; blockEnv: any } {
+  ): { transactions: any[]; blockEnv: any; txFunctionMap: Map<number, string> } {
     const deployer = SENDER_ADDRESSES[0];
     const deployAddress = ethers.getCreateAddress({ from: deployer, nonce: 0 });
 
@@ -176,6 +202,10 @@ export class VibeScoreService {
       nonce: 0,
       gas_price: '1000000000',
     });
+
+    // Build tx index → function name map
+    const txFunctionMap = new Map<number, string>();
+    txFunctionMap.set(0, 'constructor');
 
     // Call txs: one per state-changing function from rotating senders
     const iface = new ethers.Interface(abi);
@@ -213,6 +243,9 @@ export class VibeScoreService {
         nonce: 0,
         gas_price: '1000000000',
       });
+
+      // Map this tx index to its function name
+      txFunctionMap.set(transactions.length - 1, fn.name);
     }
 
     const blockEnv = {
@@ -224,7 +257,7 @@ export class VibeScoreService {
       difficulty: '0',
     };
 
-    return { transactions, blockEnv };
+    return { transactions, blockEnv, txFunctionMap };
   }
 
   /**

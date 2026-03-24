@@ -98,5 +98,33 @@ describe('CompileService', () => {
       expect(result.abi).toBeInstanceOf(Array);
       expect(result.bytecode).toMatch(/^0x[0-9a-fA-F]+$/);
     });
+
+    it('should include storageLayout with counter variable for ParallelConflict.sol', () => {
+      const source = readContract('test/ParallelConflict.sol');
+      const result = service.compile(source);
+
+      expect(result.storageLayout).toBeDefined();
+      expect(result.storageLayout!.storage).toBeInstanceOf(Array);
+      expect(result.storageLayout!.storage.length).toBeGreaterThan(0);
+
+      const counterEntry = result.storageLayout!.storage.find(
+        (entry) => entry.label === 'counter',
+      );
+      expect(counterEntry).toBeDefined();
+      expect(counterEntry!.slot).toBe('0');
+      expect(counterEntry!.offset).toBe(0);
+
+      // types map should be populated
+      expect(result.storageLayout!.types).toBeDefined();
+      expect(Object.keys(result.storageLayout!.types).length).toBeGreaterThan(0);
+    });
+
+    it('should include storageLayout for FixedContract.sol', () => {
+      const source = readContract('FixedContract.sol');
+      const result = service.compile(source);
+
+      expect(result.storageLayout).toBeDefined();
+      expect(result.storageLayout!.storage).toBeInstanceOf(Array);
+    });
   });
 });

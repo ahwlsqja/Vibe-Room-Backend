@@ -318,4 +318,130 @@ describe('VibeScoreService', () => {
       expect(result.vibeScore).toBeLessThanOrEqual(100);
     });
   });
+
+  describe('analyzeContract — conflict analysis wiring', () => {
+    const mockStorageLayout = {
+      storage: [
+        { astId: 1, contract: 'ParallelConflict', label: 'counter', offset: 0, slot: '0', type: 't_uint256' },
+      ],
+      types: {
+        t_uint256: { encoding: 'inplace', label: 'uint256', numberOfBytes: '32' },
+      },
+    };
+
+    const mockConflictDetails = {
+      per_tx: [],
+      conflicts: [
+        {
+          location: {
+            location_type: 'Storage',
+            address: '0xDeployedAddr',
+            slot: '0x0',
+          },
+          tx_a: 1,
+          tx_b: 2,
+          conflict_type: 'write-write',
+        },
+      ],
+    };
+
+    const parallelConflictAbi = [
+      {
+        type: 'function',
+        name: 'increment',
+        inputs: [],
+        outputs: [],
+        stateMutability: 'nonpayable',
+      },
+      {
+        type: 'function',
+        name: 'incrementBy',
+        inputs: [{ type: 'uint256', name: 'amount' }],
+        outputs: [],
+        stateMutability: 'nonpayable',
+      },
+      {
+        type: 'function',
+        name: 'getCount',
+        inputs: [],
+        outputs: [{ type: 'uint256' }],
+        stateMutability: 'view',
+      },
+    ];
+
+    it('includes conflictAnalysis when conflict_details and storageLayout present', async () => {
+      jest.spyOn(compileService, 'compile').mockReturnValue({
+        contractName: 'ParallelConflict',
+        abi: parallelConflictAbi,
+        bytecode: '0x6080604052',
+        storageLayout: mockStorageLayout,
+      });
+
+      jest.spyOn(engineService, 'executeBlock').mockReturnValue(
+        makeEngineResult({
+          stats: {
+            total_gas: 200000,
+            num_transactions: 3,
+            num_conflicts: 1,
+            num_re_executions: 1,
+          },
+          conflict_details: mockConflictDetails,
+        }),
+      );
+
+      const result = await service.analyzeContract('contract ParallelConflict {}');
+
+      expect(result.conflictAnalysis).toBeDefined();
+      expect(result.conflictAnalysis!.conflicts.length).toBeGreaterThan(0);
+      expect(result.conflictAnalysis!.conflicts[0].variableName).toBe('counter');
+      expect(result.conflictAnalysis!.conflicts[0].functions).toContain('increment');
+      expect(result.conflictAnalysis!.conflicts[0].functions).toContain('incrementBy');
+      expect(result.conflictAnalysis!.conflicts[0].suggestion).toBeTruthy();
+      expect(result.conflictAnalysis!.matrix.rows.length).toBeGreaterThan(0);
+      // Existing fields still present
+      expect(result.engineBased).toBe(true);
+      expect(result.vibeScore).toBeDefined();
+    });
+
+    it('omits conflictAnalysis when no conflict_details (backward compat)', async () => {
+      // Default mock has no conflict_details
+      const result = await service.analyzeContract('contract NoConflictDetails {}');
+
+      expect(result.conflictAnalysis).toBeUndefined();
+      // Existing fields intact
+      expect(result.engineBased).toBe(true);
+      expect(result.vibeScore).toBeDefined();
+      expect(result.conflicts).toBeDefined();
+      expect(result.suggestions).toBeInstanceOf(Array);
+    });
+
+    it('omits conflictAnalysis when storageLayout is undefined', async () => {
+      // No storageLayout, but conflict_details present
+      jest.spyOn(compileService, 'compile').mockReturnValue({
+        contractName: 'NoLayout',
+        abi: parallelConflictAbi,
+        bytecode: '0x6080604052',
+        // storageLayout intentionally absent
+      });
+
+      jest.spyOn(engineService, 'executeBlock').mockReturnValue(
+        makeEngineResult({
+          stats: {
+            total_gas: 200000,
+            num_transactions: 3,
+            num_conflicts: 1,
+            num_re_executions: 1,
+          },
+          conflict_details: mockConflictDetails,
+        }),
+      );
+
+      const result = await service.analyzeContract('contract NoLayout {}');
+
+      expect(result.conflictAnalysis).toBeUndefined();
+      // Existing fields still work
+      expect(result.engineBased).toBe(true);
+      expect(result.vibeScore).toBeDefined();
+    });
+  });
 });

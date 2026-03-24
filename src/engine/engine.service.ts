@@ -24,6 +24,33 @@ export interface CliOutput {
   results: TxResult[];
   incarnations: number[];
   stats: CliStats;
+  conflict_details?: ConflictDetails;
+}
+
+// ── S01 conflict_details schema — matches Rust CLI output exactly ──
+
+export interface LocationInfo {
+  location_type: string; // "Storage", "Balance", "Nonce", "CodeHash"
+  address: string; // lowercase hex with 0x prefix
+  slot?: string; // hex with 0x prefix, only for Storage type
+}
+
+export interface ConflictPair {
+  location: LocationInfo;
+  tx_a: number;
+  tx_b: number;
+  conflict_type: string; // "write-write" | "read-write"
+}
+
+export interface TxAccessSummary {
+  tx_index: number;
+  reads: LocationInfo[];
+  writes: LocationInfo[];
+}
+
+export interface ConflictDetails {
+  per_tx: TxAccessSummary[];
+  conflicts: ConflictPair[];
 }
 
 /**
