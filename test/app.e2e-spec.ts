@@ -482,21 +482,16 @@ contract Simple {
         '/api/contracts/community',
       );
       expect(res.status).toBe(200);
-      // Controller manually returns { success, data } and TransformInterceptor wraps it again
-      // So the actual shape is { success: true, data: { success: true, data: { contracts, total, page, limit } } }
-      // OR if TransformInterceptor sees the manual wrapping, it wraps anyway.
-      // Let's check the actual response structure.
+      // TransformInterceptor wraps controller return in { success, data }
+      // Controller returns { contracts, total, page, limit } directly
+      // So final shape: { success: true, data: { contracts, total, page, limit } }
       expect(res.body.success).toBe(true);
       expect(res.body.data).toBeDefined();
-      // TransformInterceptor wraps controller return in { success, data }
-      // Controller returns { success: true, data: { contracts, total, page, limit } }
-      // So final shape: { success: true, data: { success: true, data: { contracts, total, page, limit } } }
       const inner = res.body.data;
-      expect(inner.success).toBe(true);
-      expect(inner.data.contracts).toBeInstanceOf(Array);
-      expect(typeof inner.data.total).toBe('number');
-      expect(typeof inner.data.page).toBe('number');
-      expect(typeof inner.data.limit).toBe('number');
+      expect(inner.contracts).toBeInstanceOf(Array);
+      expect(typeof inner.total).toBe('number');
+      expect(typeof inner.page).toBe('number');
+      expect(typeof inner.limit).toBe('number');
     });
 
     it('GET /api/contracts/community?category=DeFi should return 200 (category filter accepted)', async () => {
@@ -521,7 +516,7 @@ contract Simple {
       );
       expect(res.status).toBe(200);
       const inner = res.body.data;
-      const contracts = inner.data.contracts;
+      const contracts = inner.contracts;
       expect(contracts.length).toBeGreaterThan(0);
       const contract = contracts[0];
       expect(typeof contract.id).toBe('string');

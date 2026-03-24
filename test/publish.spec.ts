@@ -98,10 +98,10 @@ describe('Publish & Community Endpoints', () => {
 
       const result = await controller.publish(dto, req);
 
-      expect(result.success).toBe(true);
-      expect(result.data.id).toBe('pub-123');
-      expect(result.data.name).toBe('MyToken');
-      expect(result.data.publishedAt).toBe('2026-03-20T10:00:00.000Z');
+      
+      expect(result.id).toBe('pub-123');
+      expect(result.name).toBe('MyToken');
+      expect(result.publishedAt).toBe('2026-03-20T10:00:00.000Z');
       expect(mockPrismaService.publishedContract.create).toHaveBeenCalledWith({
         data: {
           userId: 'user-1',
@@ -259,18 +259,18 @@ describe('Publish & Community Endpoints', () => {
     it('should return paginated results with author username', async () => {
       const result = await controller.getCommunity('1', '20');
 
-      expect(result.success).toBe(true);
-      expect(result.data.contracts).toHaveLength(2);
-      expect(result.data.total).toBe(2);
-      expect(result.data.page).toBe(1);
-      expect(result.data.limit).toBe(20);
+      
+      expect(result.contracts).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
 
       // Check author field is mapped from user.username
-      expect(result.data.contracts[0].author).toBe('alice');
-      expect(result.data.contracts[1].author).toBe('bob');
+      expect(result.contracts[0].author).toBe('alice');
+      expect(result.contracts[1].author).toBe('bob');
 
       // Check no nested user object
-      expect((result.data.contracts[0] as any).user).toBeUndefined();
+      expect((result.contracts[0] as any).user).toBeUndefined();
     });
 
     it('should pass category filter to Prisma query', async () => {
@@ -302,9 +302,9 @@ describe('Publish & Community Endpoints', () => {
 
       const result = await controller.getCommunity('1', '20');
 
-      expect(result.success).toBe(true);
-      expect(result.data.contracts).toEqual([]);
-      expect(result.data.total).toBe(0);
+      
+      expect(result.contracts).toEqual([]);
+      expect(result.total).toBe(0);
     });
 
     it('should calculate correct skip/take for pagination', async () => {
@@ -362,8 +362,8 @@ describe('Publish & Community Endpoints', () => {
     it('should serialize publishedAt as ISO string', async () => {
       const result = await controller.getCommunity('1', '20');
 
-      expect(result.data.contracts[0].publishedAt).toBe('2026-03-20T10:00:00.000Z');
-      expect(result.data.contracts[1].publishedAt).toBe('2026-03-19T10:00:00.000Z');
+      expect(result.contracts[0].publishedAt).toBe('2026-03-20T10:00:00.000Z');
+      expect(result.contracts[1].publishedAt).toBe('2026-03-19T10:00:00.000Z');
     });
   });
 });

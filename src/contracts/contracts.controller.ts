@@ -203,12 +203,9 @@ export class ContractsController {
     this.logger.log(`Contract published: id=${published.id}, name=${published.name}`);
 
     return {
-      success: true,
-      data: {
-        id: published.id,
-        name: published.name,
-        publishedAt: published.publishedAt.toISOString(),
-      },
+      id: published.id,
+      name: published.name,
+      publishedAt: published.publishedAt.toISOString(),
     };
   }
 
@@ -255,13 +252,10 @@ export class ContractsController {
     this.logger.log(`Community list result: ${total} total, returning ${mapped.length}`);
 
     return {
-      success: true,
-      data: {
-        contracts: mapped,
-        total,
-        page,
-        limit,
-      },
+      contracts: mapped,
+      total,
+      page,
+      limit,
     };
   }
 }
