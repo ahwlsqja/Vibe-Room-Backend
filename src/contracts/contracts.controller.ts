@@ -5,6 +5,8 @@ import {
   Query,
   Body,
   Param,
+  Req,
+  UseGuards,
   BadRequestException,
   HttpCode,
   HttpStatus,
@@ -15,9 +17,13 @@ import * as path from 'path';
 import { CompileService } from './compile.service';
 import { DeployService } from './deploy.service';
 import { VerifyService } from './verify.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { CompileRequestDto } from './dto/compile-request.dto';
 import { DeployRequestDto } from './dto/deploy-request.dto';
 import { VerifyRequestDto } from './dto/verify-request.dto';
+import { PublishRequestDto } from './dto/publish-request.dto';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 const VALID_CONTRACT_TYPES = [
   'FixedContract',
@@ -36,6 +42,7 @@ export class ContractsController {
     private readonly compileService: CompileService,
     private readonly deployService: DeployService,
     private readonly verifyService: VerifyService,
+    private readonly prismaService: PrismaService,
   ) {}
 
   /**
@@ -133,10 +140,18 @@ export class ContractsController {
    *
    * Compiles and deploys Solidity source to Monad testnet.
    * Returns { contractName, address, txHash, deploymentId }.
+   *
+   * Uses OptionalJwtAuthGuard: if a valid JWT is present, the deployment
+   * is associated with the authenticated user. Otherwise proceeds anonymously.
    */
   @Post('deploy')
-  async deploy(@Body() dto: DeployRequestDto) {
-    return this.deployService.deploy(dto.source);
+  @UseGuards(OptionalJwtAuthGuard)
+  async deploy(@Body() dto: DeployRequestDto, @Req() req: any) {
+    const userId = req.user?.id;
+    if (userId) {
+      this.logger.log(`Deploy with authenticated userId=${userId}`);
+    }
+    return this.deployService.deploy(dto.source, userId);
   }
 
   /**
@@ -160,5 +175,93 @@ export class ContractsController {
   @Get('verify/status/:jobId')
   async getVerifyStatus(@Param('jobId') jobId: string) {
     return this.verifyService.getVerificationStatus(jobId);
+  }
+
+  /**
+   * POST /api/contracts/publish
+   *
+   * Publishes a contract to the community gallery.
+   * Requires authentication (JwtAuthGuard).
+   * Returns { success: true, data: { id, name, publishedAt } }.
+   */
+  @Post('publish')
+  @UseGuards(JwtAuthGuard)
+  async publish(@Body() dto: PublishRequestDto, @Req() req: any) {
+    const userId = req.user.id;
+    this.logger.log(`Publishing contract: userId=${userId}, name=${dto.name}`);
+
+    const published = await this.prismaService.publishedContract.create({
+      data: {
+        userId,
+        source: dto.source,
+        name: dto.name,
+        description: dto.description,
+        category: dto.category ?? 'Utility',
+      },
+    });
+
+    this.logger.log(`Contract published: id=${published.id}, name=${published.name}`);
+
+    return {
+      success: true,
+      data: {
+        id: published.id,
+        name: published.name,
+        publishedAt: published.publishedAt.toISOString(),
+      },
+    };
+  }
+
+  /**
+   * GET /api/contracts/community
+   *
+   * Returns paginated community contracts with author usernames.
+   * Public endpoint — no auth required.
+   * Query params: page (default 1), limit (default 20), category (optional).
+   */
+  @Get('community')
+  async getCommunity(
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
+    @Query('category') category?: string,
+  ) {
+    const page = Math.max(1, parseInt(pageStr || '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(limitStr || '20', 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const where = category ? { category } : {};
+
+    this.logger.log(
+      `Community list: page=${page}, limit=${limit}, category=${category ?? 'all'}`,
+    );
+
+    const [contracts, total] = await Promise.all([
+      this.prismaService.publishedContract.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { publishedAt: 'desc' },
+        include: { user: { select: { username: true } } },
+      }),
+      this.prismaService.publishedContract.count({ where }),
+    ]);
+
+    const mapped = contracts.map(({ user, publishedAt, ...rest }) => ({
+      ...rest,
+      publishedAt: publishedAt.toISOString(),
+      author: user.username,
+    }));
+
+    this.logger.log(`Community list result: ${total} total, returning ${mapped.length}`);
+
+    return {
+      success: true,
+      data: {
+        contracts: mapped,
+        total,
+        page,
+        limit,
+      },
+    };
   }
 }

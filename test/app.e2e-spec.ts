@@ -50,6 +50,7 @@ contract Simple {
       }),
       update: jest.fn().mockResolvedValue({}),
       findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(5),
     },
     vibeScore: {
       create: jest.fn().mockResolvedValue({
@@ -58,6 +59,7 @@ contract Simple {
         engineBased: false,
         createdAt: new Date(),
       }),
+      aggregate: jest.fn().mockResolvedValue({ _avg: { score: 75 } }),
     },
     analysis: {
       create: jest.fn().mockResolvedValue({
@@ -68,6 +70,26 @@ contract Simple {
     user: {
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({}),
+    },
+    publishedContract: {
+      create: jest.fn().mockResolvedValue({
+        id: 'mock-published-id',
+        name: 'TestContract',
+        publishedAt: new Date(),
+      }),
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'mock-pub-1',
+          name: 'CommunityContract',
+          description: 'A test contract',
+          source: 'pragma solidity ^0.8.20; contract Foo {}',
+          category: 'DeFi',
+          vibeScore: 85,
+          publishedAt: new Date(),
+          user: { username: 'testuser' },
+        },
+      ]),
+      count: jest.fn().mockResolvedValue(1),
     },
   };
 
@@ -390,6 +412,124 @@ contract Simple {
       );
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
+    });
+  });
+
+  // ── Dashboard API (M008) ──
+
+  describe('Dashboard API (M008)', () => {
+    it('GET /api/user/deployments should return 401 without Authorization header', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/user/deployments',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('GET /api/user/stats should return 401 without Authorization header', async () => {
+      const res = await request(app.getHttpServer()).get('/api/user/stats');
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // ── Publish API (M008) ──
+
+  describe('Publish API (M008)', () => {
+    it('POST /api/contracts/publish should return 401 without Authorization header', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/contracts/publish')
+        .send({
+          source: 'pragma solidity ^0.8.20; contract Foo {}',
+          name: 'Test',
+          description: 'A test contract',
+        });
+      expect(res.status).toBe(401);
+    });
+
+    it('POST /api/contracts/publish should return 401 when body is empty (guard before validation)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/contracts/publish')
+        .send({});
+      // JwtAuthGuard runs before ValidationPipe, so 401 is returned first
+      expect(res.status).toBe(401);
+    });
+
+    it('POST /api/contracts/publish should return 401 when name exceeds 100 chars (guard before validation)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/contracts/publish')
+        .send({
+          source: 'pragma solidity ^0.8.20; contract Foo {}',
+          name: 'A'.repeat(101),
+          description: 'Test',
+        });
+      // JwtAuthGuard runs before ValidationPipe, so 401 is returned first
+      expect(res.status).toBe(401);
+    });
+
+    it('POST /api/contracts/publish should return 401 when source is missing (guard before validation)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/contracts/publish')
+        .send({ name: 'Test', description: 'A test' });
+      // JwtAuthGuard runs before ValidationPipe, so 401 is returned first
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // ── Community API (M008) ──
+
+  describe('Community API (M008)', () => {
+    it('GET /api/contracts/community should return 200 with paginated response shape', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/community',
+      );
+      expect(res.status).toBe(200);
+      // Controller manually returns { success, data } and TransformInterceptor wraps it again
+      // So the actual shape is { success: true, data: { success: true, data: { contracts, total, page, limit } } }
+      // OR if TransformInterceptor sees the manual wrapping, it wraps anyway.
+      // Let's check the actual response structure.
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeDefined();
+      // TransformInterceptor wraps controller return in { success, data }
+      // Controller returns { success: true, data: { contracts, total, page, limit } }
+      // So final shape: { success: true, data: { success: true, data: { contracts, total, page, limit } } }
+      const inner = res.body.data;
+      expect(inner.success).toBe(true);
+      expect(inner.data.contracts).toBeInstanceOf(Array);
+      expect(typeof inner.data.total).toBe('number');
+      expect(typeof inner.data.page).toBe('number');
+      expect(typeof inner.data.limit).toBe('number');
+    });
+
+    it('GET /api/contracts/community?category=DeFi should return 200 (category filter accepted)', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/community?category=DeFi',
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('GET /api/contracts/community?page=1&limit=5 should return 200 (pagination params accepted)', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/community?page=1&limit=5',
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('GET /api/contracts/community response contracts items have expected fields', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/contracts/community',
+      );
+      expect(res.status).toBe(200);
+      const inner = res.body.data;
+      const contracts = inner.data.contracts;
+      expect(contracts.length).toBeGreaterThan(0);
+      const contract = contracts[0];
+      expect(typeof contract.id).toBe('string');
+      expect(typeof contract.name).toBe('string');
+      expect(typeof contract.description).toBe('string');
+      expect(typeof contract.category).toBe('string');
+      expect(typeof contract.author).toBe('string');
+      expect(typeof contract.publishedAt).toBe('string');
     });
   });
 });

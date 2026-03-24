@@ -9,6 +9,7 @@ import { AnalysisModule } from './analysis/analysis.module';
 import { PaymasterModule } from './paymaster/paymaster.module';
 import { EngineModule } from './engine/engine.module';
 import { VibeScoreModule } from './vibe-score/vibe-score.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { VibeScoreModule } from './vibe-score/vibe-score.module';
     PaymasterModule,
     EngineModule,
     VibeScoreModule,
+    UserModule,
   ],
 })
 export class AppModule {}

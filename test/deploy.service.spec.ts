@@ -132,12 +132,12 @@ describe('DeployService', () => {
       });
     });
 
-    it('should use anonymous userId when not provided', async () => {
+    it('should use null userId when not provided', async () => {
       await service.deploy('pragma solidity ^0.8.20;');
 
       expect(prismaService.deployment.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          userId: 'anonymous',
+          userId: null,
         }),
       });
     });

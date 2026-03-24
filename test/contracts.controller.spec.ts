@@ -4,6 +4,7 @@ import { ContractsController } from '../src/contracts/contracts.controller';
 import { CompileService } from '../src/contracts/compile.service';
 import { DeployService } from '../src/contracts/deploy.service';
 import { VerifyService } from '../src/contracts/verify.service';
+import { PrismaService } from '../src/prisma/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -59,6 +60,16 @@ describe('ContractsController', () => {
           useValue: {
             submitVerification: jest.fn().mockResolvedValue(mockVerifyResult),
             getVerificationStatus: jest.fn().mockResolvedValue(mockVerifyStatusResult),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            publishedContract: {
+              create: jest.fn(),
+              findMany: jest.fn(),
+              count: jest.fn(),
+            },
           },
         },
       ],
@@ -282,10 +293,11 @@ describe('ContractsController', () => {
   describe('deploy', () => {
     it('should call deployService.deploy and return result', async () => {
       const dto = { source: 'pragma solidity ^0.8.20; contract Foo {}' };
+      const req = { user: { id: 'user-123' } };
 
-      const result = await controller.deploy(dto);
+      const result = await controller.deploy(dto, req);
 
-      expect(deployService.deploy).toHaveBeenCalledWith(dto.source);
+      expect(deployService.deploy).toHaveBeenCalledWith(dto.source, 'user-123');
       expect(result).toEqual(mockDeployResult);
     });
 
@@ -295,8 +307,17 @@ describe('ContractsController', () => {
         .mockRejectedValue(new Error('Deploy failed'));
 
       await expect(
-        controller.deploy({ source: 'some source' }),
+        controller.deploy({ source: 'some source' }, { user: null }),
       ).rejects.toThrow('Deploy failed');
+    });
+
+    it('should pass undefined userId when no user on request', async () => {
+      const dto = { source: 'pragma solidity ^0.8.20; contract Foo {}' };
+      const req = { user: null };
+
+      await controller.deploy(dto, req);
+
+      expect(deployService.deploy).toHaveBeenCalledWith(dto.source, undefined);
     });
   });
 
