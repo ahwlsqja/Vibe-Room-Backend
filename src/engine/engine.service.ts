@@ -3,14 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 
-// ── CLI output interfaces (matching Rust CliOutput from monad-cli) ──
+// ── CLI output interfaces (matching C++ monad-vibe-cli JSON output) ──
 
 export interface TxResult {
   success: boolean;
   gas_used: number;
   output: string;
   error: string | null;
-  logs_count: number;
+  logs_count: number | undefined; // C++ engine may emit null
 }
 
 export interface CliStats {
@@ -18,13 +18,14 @@ export interface CliStats {
   num_transactions: number;
   num_conflicts: number;
   num_re_executions: number;
+  per_tx_exec_time_us?: number[]; // C++ engine per-tx execution timing
 }
 
 export interface CliOutput {
   results: TxResult[];
   incarnations: number[];
   stats: CliStats;
-  conflict_details?: ConflictDetails;
+  conflict_details: ConflictDetails; // C++ engine always emits this field
 }
 
 // ── S01 conflict_details schema — matches Rust CLI output exactly ──
@@ -46,6 +47,8 @@ export interface TxAccessSummary {
   tx_index: number;
   reads: LocationInfo[];
   writes: LocationInfo[];
+  incarnation_count?: number; // C++ engine per-tx incarnation count
+  exec_time_us?: number; // C++ engine per-tx execution time in microseconds
 }
 
 export interface ConflictDetails {
@@ -54,7 +57,7 @@ export interface ConflictDetails {
 }
 
 /**
- * EngineService — subprocess bridge to the monad-cli Rust binary.
+ * EngineService — subprocess bridge to the monad-vibe-cli C++ binary.
  *
  * Spawns the CLI binary with JSON piped to stdin and parses JSON from stdout.
  * Returns null on any failure (missing binary, timeout, parse error) so

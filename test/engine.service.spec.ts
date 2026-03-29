@@ -42,6 +42,10 @@ describe('EngineService', () => {
       num_conflicts: 0,
       num_re_executions: 0,
     },
+    conflict_details: {
+      per_tx: [],
+      conflicts: [],
+    },
   };
 
   const sampleTransactions = [
@@ -75,7 +79,7 @@ describe('EngineService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn((key: string) => {
-              if (key === 'engine.binaryPath') return '/usr/local/bin/monad-cli';
+              if (key === 'engine.binaryPath') return '/usr/local/bin/monad-vibe-cli';
               return undefined;
             }),
           },
@@ -116,7 +120,7 @@ describe('EngineService', () => {
 
       // Verify spawnSync was called with correct args
       expect(mockedSpawnSync).toHaveBeenCalledWith(
-        '/usr/local/bin/monad-cli',
+        '/usr/local/bin/monad-vibe-cli',
         [],
         expect.objectContaining({
           input: expect.any(String),

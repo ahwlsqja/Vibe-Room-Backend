@@ -62,6 +62,10 @@ describe('VibeScoreService', () => {
       num_conflicts: 0,
       num_re_executions: 0,
     },
+    conflict_details: {
+      per_tx: [],
+      conflicts: [],
+    },
     ...overrides,
   });
 
